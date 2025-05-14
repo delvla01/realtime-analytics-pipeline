@@ -1,4 +1,11 @@
-# realtime-analytics-pipeline
+# Realtime Clickstream Analytics Pipeline
+
+This project demonstrates a complete real-time data engineering pipeline using only open-source and fully free tools. It simulates user clickstream events, ingests them via Kafka, processes them with Spark Structured Streaming, stores them in PostgreSQL, and supports downstream analytics and visualization.
+
+---
+
+## 🧱 Architecture
+
 ---
 
 ## ⚙️ Tech Stack
@@ -46,3 +53,18 @@ realtime-analytics-pipeline/
 ├── docker-compose.yml        # Kafka, Zookeeper, PostgreSQL
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # This file
+```
+---
+## 🚀 Getting Started
+```bash
+docker-compose up -d
+```
+```bash
+python simulation/event_producer.py
+```
+```bash
+spark-submit streaming/process_stream.py
+```
+```bash
+docker exec -it realtime-analytics-pipeline-postgres-1 psql -U analytics -d analytics
+```
