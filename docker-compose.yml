@@ -1,4 +1,20 @@
+
 version: '3.8'
+
+x-airflow-common: &airflow-common
+  build: .
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://analytics:password@postgres:5432/airflow_metadata
+    AIRFLOW__WEBSERVER__SECRET_KEY: ''
+  volumes:
+    - ./orchestration/dags:/opt/airflow/dags
+    - .:/opt/airflow/realtime-analytics-pipeline
+  user: "${AIRFLOW_UID:-50000}:0"
+
 services:
   zookeeper:
     image: wurstmeister/zookeeper
@@ -14,13 +30,64 @@ services:
     environment:
       KAFKA_ADVERTISED_HOST_NAME: localhost
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
 
   postgres:
     image: postgres:13
-    platform: linux/arm64  # official postgres has native ARM64 support
+    container_name: postgres
+    platform: linux/arm64
     environment:
       POSTGRES_USER: analytics
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: analytics
+      POSTGRES_DB: airflow_metadata
     ports:
       - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  spark:
+    image: bitnami/spark:3.3.2
+    container_name: spark
+    platform: linux/amd64
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - .:/opt/bitnami/spark/project
+    depends_on:
+      - kafka
+      - postgres
+    command: bash -c "tail -f /dev/null"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      - airflow-scheduler
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    depends_on:
+      - postgres
+      - kafka
+
+  airflow-init:
+    <<: *airflow-common
+    depends_on:
+      - postgres
+    command: >
+      bash -c "
+        sleep 10 &&
+        airflow db migrate &&
+        airflow users create --username airflow --password airflow --firstname Air --lastname Flow --role Admin --email airflow@example.com
+      "
+
+volumes:
+  pg_data:
