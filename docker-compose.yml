@@ -2,11 +2,13 @@ version: '3.8'
 services:
   zookeeper:
     image: wurstmeister/zookeeper
+    platform: linux/amd64
     ports:
       - "2181:2181"
 
   kafka:
     image: wurstmeister/kafka
+    platform: linux/amd64
     ports:
       - "9092:9092"
     environment:
@@ -15,6 +17,7 @@ services:
 
   postgres:
     image: postgres:13
+    platform: linux/arm64  # official postgres has native ARM64 support
     environment:
       POSTGRES_USER: analytics
       POSTGRES_PASSWORD: password
