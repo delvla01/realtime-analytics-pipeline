@@ -17,7 +17,7 @@ spark = SparkSession.builder \
 # Read stream from Kafka topic
 raw_df = spark.readStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("kafka.bootstrap.servers", "kafka:9092") \
     .option("subscribe", "clickstream") \
     .load()
 
@@ -30,10 +30,10 @@ parsed_df = raw_df.selectExpr("CAST(value AS STRING)") \
 def write_to_postgres(batch_df, batch_id):
     batch_df.write \
         .format("jdbc") \
-        .option("url", "jdbc:postgresql://localhost:5432/analytics") \
+        .option("url", "jdbc:postgresql://postgres:5432/analytics") \
         .option("dbtable", "clickstream_events") \
-        .option("user", "analytics") \
-        .option("password", "password") \
+        .option("user", "") \
+        .option("password", "") \
         .option("driver", "org.postgresql.Driver") \
         .mode("append") \
         .save()
